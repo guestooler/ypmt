@@ -1,12 +1,151 @@
-<!DOCTYPE html>
-<html>
- 
-	<head>
-<script data-ad-client="ca-pub-4537455669060719" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
-	</head>
- 
-	<body>
-		
-	</body>
- 
-</html>
+@echo off & setlocal EnableDelayedExpansion
+title 设置IP地址与域名zyg.sh的通信测试...
+color 0A
+goto init
+::初始化操作
+:init
+set value=
+set manual=
+set ethernetAdapter=
+set ipAddr=
+set subMask=
+set gateway=
+set primaryDNS=192.168.10.39
+set spareDNS=202.96.209.133
+set defaultSubMask=192.168.10.1
+::选择怎么获取IP地址
+echo.
+echo       1 选择自动获取IP地址
+echo.
+echo       2 选择预设静态IP地址
+echo.
+echo       3 选择手动静态IP地址
+echo.
+      set /p value=       请选择操作：
+if !value! == 1 ( 
+    goto auto
+) else ( 
+    if !value! == 2 ( 
+        goto static
+    ) else ( 
+  if !value! == 3 ( 
+        goto manual
+    ) else (
+        if !value! == exit (
+            exit /b
+        ) else (
+            goto error
+        )
+    )
+ )
+)
+:eof
+
+::设置动态获取IP地址
+:auto
+goto scanEthernetAdapter
+:eof
+
+::手动预设静态IP地址
+:static
+:echo.
+set  ipAddr=192.168.10.39
+set  subMask=255.255.255.0
+set  gateway=192.168.10.1
+goto scanEthernetAdapter
+:eof
+
+::手动设置静态IP地址
+:manual
+:echo.
+echo 请手动输入IP并回车
+set /p ipAddr=
+echo 请手动输入子网掩码并回车
+set /p subMask=
+echo 请手动输入网关并回车
+set /p gateway=
+goto scanEthernetAdapter
+:eof
+
+::获取网络连接名称
+:scanEthernetAdapter
+@(for /f "tokens=3*" %%a in ('netsh interface show interface^|more +2') do @echo,%%b)>"c:\network.txt"
+set j=0
+for /f "tokens=*" %%i in (c:\network.txt) do (
+    set /a j+=1
+    set con!j!=%%i
+    call set ethernetAdapter=%%con!j!%%
+    echo !ethernetAdapter!
+)
+
+goto setup
+
+:eof
+:setup
+if !value! == 1 (
+    echo.
+    echo 正在设置自动获取IP地址...
+    netsh interface ip set address name = %ethernetAdapter% source = dhcp
+::自动获取DNS  netsh interface ip set dns name = %ethernetAdapter% source = dhcp
+        echo.
+    echo 正在设置首选DNS服务器...
+    cmd /c netsh interface ip set dns name=%ethernetAdapter% source=static addr=%primaryDNS% register=PRIMARY validate=no
+    echo.
+    echo 正在设置备用DNS服务器...
+    cmd /c netsh interface ip add dns name=%ethernetAdapter% addr=%spareDNS% validate=no
+    echo 自动获取IP地址成功！
+) else (
+    echo.
+    echo 正在设置静态IP地址...
+    if "%subMask%"=="" (
+        echo.
+        echo IP地址： %ethernetAdapter% %ipAddr% %defaultSubMask% %gateway%
+        netsh interface ip set addr name=%ethernetAdapter% source=static addr=%ipAddr% mask=%defaultSubMask% gateway=%gateway%
+    ) else (
+        echo.
+        echo IP地址： %ethernetAdapter% %ipAddr% %subMask% %gateway%
+        netsh interface ip set addr name=%ethernetAdapter% source=static addr=%ipAddr% mask=%subMask% gateway=%gateway%
+    )
+    echo.
+    echo 正在设置首选DNS服务器...
+    cmd /c netsh interface ip set dns name=%ethernetAdapter% source=static addr=%primaryDNS% register=PRIMARY validate=no
+    echo.
+    echo 正在设置备用DNS服务器...
+    echo.
+    cmd /c netsh interface ip add dns name=%ethernetAdapter% addr=%spareDNS% validate=no
+    echo 设置静态IP地址成功！
+)
+echo.
+echo ————————————————————————————————    
+echo       15秒等待本地网络重新连接进行测试......
+echo ———————————————————————————————— 
+)
+
+timeout /nobreak /t 15
+)
+
+cmd /c ping "%gateway%"
+）
+echo.
+echo.
+echo ————————————————————————————————    
+echo       10秒等待测试是否可以和域名zyg.sh通信......
+echo ———————————————————————————————— 
+timeout /nobreak /t 10
+echo.
+cmd /c ping "zyg.sh"
+echo.
+echo.
+echo.
+echo ———————————————————————————————— 
+echo       本地网络重新连接成功10秒后自动退出......
+echo ———————————————————————————————— 
+)
+echo.
+echo.
+
+timeout /nobreak /t 10
+echo.
+echo.
+echo ......
+)
